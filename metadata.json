@@ -1,0 +1,5 @@
+{
+  "name": "Misinformation & Scam Analyzer",
+  "description": "An intelligent tool to detect misinformation and scams in messages, news, and online claims using AI-driven analysis.",
+  "requestFramePermissions": []
+}
