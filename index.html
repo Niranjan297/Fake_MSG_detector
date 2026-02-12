@@ -14,6 +14,45 @@
             font-family: 'Inter', sans-serif;
             background-color: #f9fafb;
         }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes progressFill {
+            from { width: 0%; }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        .animate-scale-in {
+            animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .progress-bar-animate {
+            animation: progressFill 1.5s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+        }
     </style>
 <script type="importmap">
 {

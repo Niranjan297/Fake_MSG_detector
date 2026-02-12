@@ -4,76 +4,79 @@ import { Verdict, AnalysisResult } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
-const ANALYSIS_SCHEMA = {
-  type: Type.OBJECT,
-  properties: {
-    verdict: {
-      type: Type.STRING,
-      description: "One of: FAKE, UNCERTAIN, GENUINE",
-    },
-    confidence: {
-      type: Type.NUMBER,
-      description: "Confidence score from 0 to 100",
-    },
-    explanations: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          id: { type: Type.STRING },
-          icon: { type: Type.STRING, description: "Lucide icon name identifier (e.g. AlertTriangle, Search, Info, ShieldOff)" },
-          title: { type: Type.STRING },
-          description: { type: Type.STRING }
-        },
-        required: ["id", "icon", "title", "description"]
-      }
-    },
-    claims: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          id: { type: Type.STRING },
-          text: { type: Type.STRING },
-          status: { type: Type.STRING, description: "One of: True, False, Misleading" }
-        },
-        required: ["id", "text", "status"]
-      }
-    },
-    sources: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          id: { type: Type.STRING },
-          title: { type: Type.STRING },
-          url: { type: Type.STRING },
-          reliability: { type: Type.STRING, description: "One of: Trusted, Unknown" }
-        },
-        required: ["id", "title", "url", "reliability"]
-      }
-    },
-    risks: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING }
-    }
-  },
-  required: ["verdict", "confidence", "explanations", "claims", "sources", "risks"]
-};
+const ANALYSIS_SCHEMA_PROMPT = `
+{
+  "verdict": "FAKE | UNCERTAIN | GENUINE",
+  "confidence": number (0-100),
+  "explanations": [
+    { "id": "string", "icon": "AlertTriangle|Search|Info|ShieldOff|CheckCircle", "title": "string", "description": "string" }
+  ],
+  "claims": [
+    { "id": "string", "text": "string", "status": "True|False|Misleading" }
+  ],
+  "sources": [
+    { "id": "string", "title": "string", "url": "string", "reliability": "Trusted|Unknown" }
+  ],
+  "risks": ["string"]
+}
+`;
 
 export async function analyzeMessage(text: string): Promise<AnalysisResult> {
+  // We use gemini-3-flash-preview for balanced speed and reasoning.
+  // Google Search is crucial for verifying real-time facts.
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Analyze the following message for misinformation, scam potential, and factual accuracy.
-    Provide a verdict, confidence score, detailed explanations, a breakdown of specific claims, evidence sources, and risks.
+    contents: `Analyze this message objectively for truthfulness and potential scam elements. 
+
+    CRITICAL INSTRUCTION:
+    Separate 'Style' from 'Substance'. Some legitimate news or official alerts use sensationalist, urgent, or 'clickbait' language to get attention. Do NOT flag a message as FAKE just because it sounds sensational if the core facts are verifiable and true. 
     
-    Message: "${text}"`,
+    1. Identify the core factual claims.
+    2. Use Google Search to verify these claims against multiple reputable sources.
+    3. Check for specific red flags like suspicious URLs (mismatched domains), requests for sensitive data, or financial scams.
+    4. If the claims are supported by major news outlets or official government/scientific bodies, the verdict must be GENUINE, even if the tone is urgent.
+
+    Message to analyze: "${text}"
+    
+    Return your analysis strictly as a JSON object matching this structure: ${ANALYSIS_SCHEMA_PROMPT}`,
     config: {
-      responseMimeType: "application/json",
-      responseSchema: ANALYSIS_SCHEMA
+      systemInstruction: `You are an elite, neutral fact-checker and digital forensics expert. 
+      Your priority is Factual Accuracy above all else. 
+      
+      Guidelines:
+      - TRUTH OVER TONE: Legitimate breaking news often uses high-intensity language. If search confirms the event, it is GENUINE.
+      - EVIDENCE-BASED: Do not assume a message is a scam based on formatting (like all caps or emojis) if the underlying facts are corroborated by trusted sources.
+      - SCAM DETECTION: Focus on malicious intent—phishing links, fraudulent financial requests, and known viral hoaxes.
+      - CLEAR REASONING: In your explanations, clearly state why the message is considered genuine or fake, citing specific evidence or lack thereof.`,
+      tools: [{ googleSearch: {} }],
     }
   });
 
-  const data = JSON.parse(response.text || '{}');
-  return data as AnalysisResult;
+  let data: any = {};
+  const responseText = response.text || "";
+  
+  try {
+    // Attempt to extract JSON from markdown if necessary
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    data = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
+  } catch (e) {
+    console.error("Failed to parse AI response as JSON", e);
+    throw new Error("Analysis failed. The model returned an invalid format.");
+  }
+
+  // Extract grounding URLs from metadata for transparency
+  const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+  const groundingUrls: {uri: string, title: string}[] = [];
+  if (groundingChunks) {
+    groundingChunks.forEach((chunk: any) => {
+      if (chunk.web?.uri) {
+        groundingUrls.push({
+          uri: chunk.web.uri,
+          title: chunk.web.title || 'Verified Source'
+        });
+      }
+    });
+  }
+
+  return { ...data, groundingUrls };
 }

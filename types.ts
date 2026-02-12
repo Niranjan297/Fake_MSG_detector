@@ -32,4 +32,5 @@ export interface AnalysisResult {
   claims: Claim[];
   sources: Source[];
   risks: string[];
+  groundingUrls?: {uri: string, title: string}[];
 }

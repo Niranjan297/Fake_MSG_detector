@@ -4,19 +4,15 @@ import { ShieldAlert } from 'lucide-react';
 
 const Header: React.FC = () => {
   return (
-    <header className="py-12 text-center">
-      <div className="flex justify-center items-center mb-4">
-        <div className="bg-indigo-100 p-3 rounded-2xl">
-          <ShieldAlert className="w-8 h-8 text-indigo-600" />
-        </div>
-      </div>
-      <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-        Misinformation & Scam Analyzer
+    <div className="flex-1">
+      <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+        <ShieldAlert className="w-8 h-8 text-indigo-600" />
+        Content Analyzer
       </h1>
-      <p className="mt-3 text-lg text-gray-500 max-w-2xl mx-auto">
-        Understand if a message is trustworthy — with clear, AI-driven reasoning and evidence.
+      <p className="text-gray-500 font-medium">
+        Input any message to verify its authenticity with AI.
       </p>
-    </header>
+    </div>
   );
 };
 
