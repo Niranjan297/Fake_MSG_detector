@@ -4,9 +4,9 @@ import Header from './components/Header';
 import InputSection from './components/InputSection';
 import ResultSection from './components/ResultSection';
 import HomePage from './components/HomePage';
-import { analyzeMessage } from './services/geminiService';
-import { AnalysisResult } from './types';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { analyzeContent } from './services/geminiService';
+import { AnalysisResult, InputType } from './types';
+import { AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 type View = 'home' | 'analyzer';
 
@@ -17,7 +17,7 @@ const App: React.FC = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (type: InputType) => {
     if (!input.trim()) return;
     
     setIsLoading(true);
@@ -25,11 +25,11 @@ const App: React.FC = () => {
     setResult(null);
 
     try {
-      const data = await analyzeMessage(input);
+      const data = await analyzeContent(input, type);
       setResult(data);
     } catch (err: any) {
       console.error(err);
-      setError('An error occurred while analyzing the message. Please try again.');
+      setError('An error occurred during analysis. Our scanning engines might be busy. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +46,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center">
+    <div className="min-h-screen flex flex-col items-center bg-[#f9fafb]">
       {view === 'home' ? (
         <main className="w-full">
           <div className="flex justify-between items-center px-8 py-6 max-w-7xl mx-auto w-full">
@@ -71,8 +71,8 @@ const App: React.FC = () => {
           <HomePage onStart={goToAnalyzer} />
         </main>
       ) : (
-        <div className="w-full max-w-6xl px-4 sm:px-6 animate-in slide-in-from-right-4 duration-500">
-          <div className="flex items-center gap-4 py-8">
+        <div className="w-full max-w-6xl px-4 sm:px-6">
+          <div className="flex items-center gap-4 py-8 animate-fade-in-up">
             <button 
               onClick={goToHome}
               className="p-2 hover:bg-gray-100 rounded-xl transition-colors group"
@@ -98,12 +98,17 @@ const App: React.FC = () => {
             )}
 
             {isLoading && !result && (
-              <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-                  <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <div className="flex flex-col items-center justify-center py-20 space-y-6">
+                <div className="relative">
+                  <div className="w-24 h-24 border-4 border-indigo-100 rounded-full" />
+                  <div className="w-24 h-24 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin absolute top-0" />
+                  {/* Fixed reference to ShieldCheck by adding the import above */}
+                  <ShieldCheck className="w-10 h-10 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-700">Analyzing Content</h3>
-                <p className="text-gray-500">Checking sources, logic, and patterns...</p>
+                <div className="text-center space-y-2">
+                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Multi-Engine Scan in Progress</h3>
+                  <p className="text-gray-500 max-w-xs mx-auto text-sm">Aggregating data from security vendors and fact-checking sources...</p>
+                </div>
               </div>
             )}
 
@@ -112,9 +117,9 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <footer className="mt-auto py-8 text-center text-gray-400 text-sm border-t border-gray-100 w-full bg-white">
+      <footer className="mt-auto py-8 text-center text-gray-400 text-[11px] font-bold uppercase tracking-widest border-t border-gray-100 w-full bg-white">
         <div className="max-w-6xl mx-auto px-4">
-          <p>© {new Date().getFullYear()} TrustShield AI. This tool provides AI-based analysis and should not replace critical human judgment.</p>
+          <p>© {new Date().getFullYear()} TrustShield AI / Security Hub. All analysis is advisory.</p>
         </div>
       </footer>
     </div>

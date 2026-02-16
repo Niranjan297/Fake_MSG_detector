@@ -1,6 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp, ExternalLink, ShieldCheck, AlertTriangle, FileSearch, HelpCircle, Globe } from 'lucide-react';
+import { 
+  CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp, 
+  ExternalLink, ShieldCheck, AlertTriangle, FileSearch, 
+  HelpCircle, Globe, ThumbsUp, ThumbsDown, Activity, 
+  Database, Info, Clock, User
+} from 'lucide-react';
 import { Verdict, AnalysisResult } from '../types';
 
 const IconMap: Record<string, any> = {
@@ -20,236 +25,227 @@ interface ResultSectionProps {
 }
 
 const ResultSection: React.FC<ResultSectionProps> = ({ result }) => {
-  const [showTips, setShowTips] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'DETECTIONS' | 'DETAILS' | 'COMMUNITY'>('DETECTIONS');
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const getVerdictStyles = () => {
-    switch (result.verdict) {
-      case Verdict.FAKE:
-        return {
-          bg: 'bg-red-50 border-red-200',
-          text: 'text-red-700',
-          icon: <XCircle className="w-10 h-10 text-red-500" />,
-          label: 'Likely Fake or Scam',
-          barColor: 'bg-red-500'
-        };
-      case Verdict.UNCERTAIN:
-        return {
-          bg: 'bg-amber-50 border-amber-200',
-          text: 'text-amber-700',
-          icon: <AlertCircle className="w-10 h-10 text-amber-500" />,
-          label: 'Analysis Uncertain',
-          barColor: 'bg-amber-500'
-        };
-      case Verdict.GENUINE:
-        return {
-          bg: 'bg-emerald-50 border-emerald-200',
-          text: 'text-emerald-700',
-          icon: <CheckCircle className="w-10 h-10 text-emerald-500" />,
-          label: 'Likely Genuine',
-          barColor: 'bg-emerald-500'
-        };
-      default:
-        return {
-          bg: 'bg-gray-50 border-gray-200',
-          text: 'text-gray-700',
-          icon: <HelpCircle className="w-10 h-10 text-gray-500" />,
-          label: 'Inconclusive',
-          barColor: 'bg-gray-500'
-        };
+    const maliciousCount = result.detections.filter(d => d.status === 'Malicious' || d.status === 'Suspicious').length;
+    const totalDetections = result.detections.length;
+    
+    if (result.verdict === Verdict.FAKE || (totalDetections > 0 && maliciousCount > 0)) {
+      return {
+        bg: 'bg-red-50 border-red-200',
+        text: 'text-red-700',
+        icon: <XCircle className="w-12 h-12 text-red-500" />,
+        label: `${maliciousCount}/${totalDetections} engines detected this as malicious`,
+        barColor: 'bg-red-500'
+      };
     }
+    if (result.verdict === Verdict.UNCERTAIN) {
+      return {
+        bg: 'bg-amber-50 border-amber-200',
+        text: 'text-amber-700',
+        icon: <AlertCircle className="w-12 h-12 text-amber-500" />,
+        label: 'Analysis Uncertain / Mixed Ratings',
+        barColor: 'bg-amber-500'
+      };
+    }
+    return {
+      bg: 'bg-emerald-50 border-emerald-200',
+      text: 'text-emerald-700',
+      icon: <CheckCircle className="w-12 h-12 text-emerald-500" />,
+      label: 'No security vendors flagged this as malicious',
+      barColor: 'bg-emerald-500'
+    };
   };
 
   const styles = getVerdictStyles();
-  const gUrls = result.groundingUrls || [];
 
   return (
-    <div className="max-w-5xl mx-auto w-full space-y-8 pb-20">
-      {/* Verdict Banner */}
-      <div className={`p-8 rounded-3xl border-2 ${styles.bg} shadow-sm animate-scale-in`}>
-        <div className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="bg-white/60 p-2 rounded-2xl shadow-sm animate-scale-in" style={{ animationDelay: '100ms' }}>
-              {styles.icon}
-            </div>
-            <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-              <h2 className={`text-3xl font-bold ${styles.text}`}>
-                {styles.label}
-              </h2>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-gray-500 font-medium text-sm sm:text-base">System Confidence</p>
-                {gUrls.length > 0 && (
-                  <span className="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                    <Globe className="w-3 h-3" /> Search Verified
-                  </span>
-                )}
-              </div>
-            </div>
+    <div className="max-w-6xl mx-auto w-full space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* VirusTotal Header Grid */}
+      <div className={`p-8 rounded-[2rem] border-2 ${styles.bg} shadow-sm grid md:grid-cols-12 gap-8 items-center`}>
+        <div className="md:col-span-1 flex justify-center">
+          <div className="bg-white/60 p-3 rounded-2xl shadow-sm animate-scale-in">
+            {styles.icon}
           </div>
-          <div className="md:w-64 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-            <div className="flex justify-between mb-2">
-              <span className="text-sm font-semibold text-gray-600">{result.confidence}%</span>
-              <span className="text-sm text-gray-400">Score</span>
+        </div>
+        
+        <div className="md:col-span-7 space-y-1">
+          <h2 className={`text-2xl font-black ${styles.text} uppercase tracking-tight`}>
+            {styles.label}
+          </h2>
+          <div className="flex items-center gap-4 text-sm font-medium text-gray-500">
+            <span className="flex items-center gap-1.5"><Activity className="w-4 h-4" /> Score: {result.reputationScore}/100</span>
+            <span className="flex items-center gap-1.5"><Database className="w-4 h-4" /> Type: {result.inputType}</span>
+          </div>
+        </div>
+
+        <div className="md:col-span-4 flex justify-end items-center gap-6">
+          <div className="text-center">
+            <div className="flex items-center gap-2 mb-2">
+              <button className="p-2 hover:bg-emerald-100 rounded-lg text-emerald-600 transition-colors"><ThumbsUp className="w-5 h-5" /></button>
+              <span className="font-bold text-gray-700">{result.communityVotes.positive}</span>
+              <button className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition-colors"><ThumbsDown className="w-5 h-5" /></button>
+              <span className="font-bold text-gray-700">{result.communityVotes.negative}</span>
             </div>
-            <div className="w-full bg-gray-200/50 rounded-full h-3 overflow-hidden">
-              <div
-                className={`h-3 rounded-full ${styles.barColor} transition-all duration-1000 ease-out ${mounted ? 'progress-bar-animate' : ''}`}
-                style={{ width: `${result.confidence}%` }}
-              ></div>
-            </div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Community Rating</p>
+          </div>
+          <div className="h-12 w-px bg-gray-200 hidden md:block" />
+          <div className="w-20 h-20 relative flex items-center justify-center">
+             <svg className="w-full h-full -rotate-90">
+                <circle cx="40" cy="40" r="32" fill="transparent" stroke="#e5e7eb" strokeWidth="8" />
+                <circle 
+                  cx="40" cy="40" r="32" fill="transparent" stroke={result.verdict === Verdict.GENUINE ? '#10b981' : '#ef4444'} 
+                  strokeWidth="8" strokeDasharray={`${result.reputationScore * 2}, 200`}
+                  className="transition-all duration-1000 ease-out"
+                />
+             </svg>
+             <span className="absolute font-black text-lg">{result.reputationScore}%</span>
           </div>
         </div>
       </div>
 
-      {/* Explanation Grid - Staggered */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {result.explanations.map((exp, index) => {
-          const IconComponent = IconMap[exp.icon] || HelpCircle;
-          return (
-            <div 
-              key={exp.id} 
-              className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 animate-fade-in-up"
-              style={{ animationDelay: `${300 + (index * 80)}ms` }}
+      {/* Main Content Tabs */}
+      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex border-b border-gray-100 px-8">
+          {['DETECTIONS', 'DETAILS', 'COMMUNITY'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`px-6 py-4 font-bold text-xs uppercase tracking-widest transition-all relative ${
+                activeTab === tab ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
+              }`}
             >
-              <div className="bg-indigo-50 w-10 h-10 rounded-xl flex items-center justify-center mb-4">
-                <IconComponent className="w-5 h-5 text-indigo-600" />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2 text-base">{exp.title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{exp.description}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Claims Table */}
-        <div className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900">Analysis Breakdown</h3>
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{result.claims.length} Claims</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Statement</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Verification</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {result.claims.map((claim, idx) => (
-                    <tr 
-                      key={claim.id} 
-                      className="hover:bg-gray-50/50 transition-colors animate-fade-in-up"
-                      style={{ animationDelay: `${600 + (idx * 40)}ms` }}
-                    >
-                      <td className="px-6 py-5 text-gray-800 font-medium text-sm leading-relaxed">{claim.text}</td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase ${
-                          claim.status === 'True' ? 'bg-emerald-100 text-emerald-700' :
-                          claim.status === 'False' ? 'bg-red-100 text-red-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
-                          {claim.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+              {tab}
+              {activeTab === tab && <div className="absolute bottom-0 left-6 right-6 h-1 bg-indigo-600 rounded-t-full" />}
+            </button>
+          ))}
         </div>
 
-        {/* Right: Evidence & Risks */}
-        <div className="space-y-6">
-          <div className="animate-fade-in-up" style={{ animationDelay: '650ms' }}>
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-indigo-500" />
-              Sources & Evidence
-            </h3>
-            <div className="space-y-3">
-              {/* Google Grounding Results */}
-              {gUrls.map((url, idx) => (
-                <a
-                  key={`g-${idx}`}
-                  href={url.uri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100 hover:border-indigo-300 group transition-all animate-fade-in-up"
-                  style={{ animationDelay: `${750 + (idx * 70)}ms` }}
+        <div className="p-8">
+          {activeTab === 'DETECTIONS' && (
+            <div className="grid md:grid-cols-2 gap-x-12 gap-y-4">
+              {result.detections.map((engine, idx) => (
+                <div 
+                  key={idx} 
+                  className="flex items-center justify-between p-3 border-b border-gray-50 hover:bg-gray-50 transition-colors rounded-lg group animate-fade-in-up"
+                  style={{ animationDelay: `${idx * 30}ms` }}
                 >
-                  <div className="bg-white p-1.5 rounded-lg shadow-sm">
-                    <Globe className="w-4 h-4 text-indigo-600" />
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${engine.status === 'Clean' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                    <span className="font-bold text-gray-700 text-sm">{engine.name}</span>
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-sm text-gray-800 line-clamp-2 group-hover:text-indigo-600 transition-colors">{url.title}</h4>
-                    <span className="text-[10px] font-bold text-indigo-500 uppercase">Search Grounding</span>
-                  </div>
-                </a>
-              ))}
-              {/* Model-provided sources */}
-              {result.sources.map((source, idx) => (
-                <a
-                  key={source.id}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-gray-100 hover:border-indigo-300 group transition-all shadow-sm animate-fade-in-up"
-                  style={{ animationDelay: `${800 + (idx * 70)}ms` }}
-                >
-                  <div className="bg-gray-50 p-1.5 rounded-lg">
-                    <ExternalLink className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-sm text-gray-800 line-clamp-2 group-hover:text-indigo-600 transition-colors">{source.title}</h4>
-                    <span className={`text-[10px] font-bold uppercase ${source.reliability === 'Trusted' ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {source.reliability}
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] text-gray-400 font-medium italic group-hover:text-gray-500">{engine.method}</span>
+                    <span className={`text-xs font-bold ${engine.status === 'Clean' ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {engine.status}
                     </span>
                   </div>
-                </a>
-              ))}
-              {result.sources.length === 0 && gUrls.length === 0 && (
-                <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 animate-fade-in-up" style={{ animationDelay: '700ms' }}>
-                  <p className="text-xs text-gray-400 italic">No external verification links found.</p>
                 </div>
-              )}
+              ))}
             </div>
-          </div>
+          )}
 
-          <div className="animate-fade-in-up" style={{ animationDelay: '850ms' }}>
-            <button
-              onClick={() => setShowTips(!showTips)}
-              className="w-full flex items-center justify-between p-5 bg-gray-900 text-white rounded-2xl shadow-lg hover:bg-black transition-all active:scale-[0.98]"
-            >
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <span className="font-bold">Risk Assessment</span>
+          {activeTab === 'DETAILS' && (
+            <div className="space-y-8">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <h4 className="flex items-center gap-2 font-bold text-gray-900 border-b pb-2"><Info className="w-4 h-4 text-indigo-500" /> Basic Information</h4>
+                  <div className="space-y-4 text-sm">
+                    <div className="flex justify-between border-b border-gray-50 pb-2">
+                      <span className="text-gray-400 font-medium">Verdict</span>
+                      <span className="font-bold text-gray-700">{result.verdict}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-50 pb-2">
+                      <span className="text-gray-400 font-medium">Confidence Level</span>
+                      <span className="font-bold text-gray-700">{result.confidence}%</span>
+                    </div>
+                    {result.technicalDetails?.creationDate && (
+                      <div className="flex justify-between border-b border-gray-50 pb-2">
+                        <span className="text-gray-400 font-medium">First Seen/Creation</span>
+                        <span className="font-bold text-gray-700">{result.technicalDetails.creationDate}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-6">
+                  <h4 className="flex items-center gap-2 font-bold text-gray-900 border-b pb-2"><Database className="w-4 h-4 text-indigo-500" /> Technical Details</h4>
+                  <div className="bg-gray-50 p-4 rounded-xl font-mono text-xs text-gray-600 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    {result.technicalDetails?.whois || "No additional technical metadata available."}
+                  </div>
+                </div>
               </div>
-              {showTips ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-            
-            <div className={`overflow-hidden transition-all duration-300 ${showTips ? 'max-h-96 mt-4' : 'max-h-0'}`}>
-              <div className="p-5 bg-white border border-gray-100 rounded-2xl shadow-sm">
-                <ul className="space-y-3">
-                  {result.risks.map((risk, idx) => (
-                    <li key={idx} className="flex gap-3 items-start animate-fade-in-up" style={{ animationDelay: `${40 * idx}ms` }}>
-                      <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />
-                      <p className="text-gray-600 text-xs leading-relaxed font-medium">{risk}</p>
-                    </li>
+
+              <div className="space-y-4">
+                <h4 className="flex items-center gap-2 font-bold text-gray-900 border-b pb-2"><ShieldCheck className="w-4 h-4 text-indigo-500" /> Key Security Claims</h4>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {result.claims.map((claim, idx) => (
+                    <div key={idx} className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                       <p className="text-xs font-bold text-gray-700 mb-2">{claim.text}</p>
+                       <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${
+                         claim.status === 'True' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                       }`}>{claim.status}</span>
+                    </div>
                   ))}
-                  {result.risks.length === 0 && (
-                    <li className="text-gray-400 text-xs text-center italic">No significant risks identified.</li>
-                  )}
-                </ul>
+                </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'COMMUNITY' && (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
+              <div className="bg-gray-100 p-6 rounded-full">
+                <User className="w-12 h-12 text-gray-400" />
+              </div>
+              <h4 className="text-xl font-bold text-gray-900">Community Discussion</h4>
+              <p className="text-gray-500 max-w-sm">There are no comments for this content yet. Be the first to provide feedback on this analysis.</p>
+              <button className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all">Write a Comment</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Grounding & Verification Sources (Add-on) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+          <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <Globe className="w-5 h-5 text-indigo-500" /> Search Grounding Results
+          </h3>
+          <div className="space-y-3">
+             {result.groundingUrls?.map((url, i) => (
+               <a key={i} href={url.uri} target="_blank" className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-indigo-50 transition-all group">
+                 <div className="min-w-0 flex-1 mr-4">
+                   <p className="text-sm font-bold text-gray-800 truncate">{url.title}</p>
+                   <p className="text-[10px] text-gray-400 truncate">{url.uri}</p>
+                 </div>
+                 <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors" />
+               </a>
+             ))}
+             {(!result.groundingUrls || result.groundingUrls.length === 0) && (
+               <p className="text-sm text-gray-400 italic">No search grounding links found.</p>
+             )}
           </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+           <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+             <AlertTriangle className="w-5 h-5 text-red-500" /> Risk Assessment
+           </h3>
+           <div className="space-y-3">
+             {result.risks.map((risk, i) => (
+               <div key={i} className="flex gap-4 p-4 bg-red-50/50 rounded-2xl border border-red-100/50">
+                 <div className="w-2 h-2 mt-2 rounded-full bg-red-400 flex-shrink-0" />
+                 <p className="text-sm text-gray-700 font-medium">{risk}</p>
+               </div>
+             ))}
+           </div>
         </div>
       </div>
     </div>

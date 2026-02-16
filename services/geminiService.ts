@@ -1,79 +1,84 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Verdict, AnalysisResult } from "../types";
+import { Verdict, AnalysisResult, InputType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Always initialize with direct process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const ANALYSIS_SCHEMA_PROMPT = `
 {
+  "inputType": "TEXT | URL | DOMAIN | FILE",
   "verdict": "FAKE | UNCERTAIN | GENUINE",
   "confidence": number (0-100),
+  "reputationScore": number (0-100),
+  "communityVotes": { "positive": number, "negative": number },
   "explanations": [
     { "id": "string", "icon": "AlertTriangle|Search|Info|ShieldOff|CheckCircle", "title": "string", "description": "string" }
   ],
   "claims": [
     { "id": "string", "text": "string", "status": "True|False|Misleading" }
   ],
+  "detections": [
+    { "name": "string", "status": "Clean|Malicious|Suspicious", "method": "string" }
+  ],
   "sources": [
     { "id": "string", "title": "string", "url": "string", "reliability": "Trusted|Unknown" }
   ],
+  "technicalDetails": {
+    "whois": "string",
+    "creationDate": "string",
+    "registrar": "string",
+    "hostingProvider": "string"
+  },
   "risks": ["string"]
 }
 `;
 
-export async function analyzeMessage(text: string): Promise<AnalysisResult> {
-  // We use gemini-3-flash-preview for balanced speed and reasoning.
-  // Google Search is crucial for verifying real-time facts.
+export async function analyzeContent(content: string, type: InputType): Promise<AnalysisResult> {
+  // Use ai.models.generateContent with the appropriate model name
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: `Analyze this message objectively for truthfulness and potential scam elements. 
+    model: "gemini-3-pro-preview",
+    contents: `Perform a VirusTotal-inspired deep analysis on the following ${type}:
 
-    CRITICAL INSTRUCTION:
-    Separate 'Style' from 'Substance'. Some legitimate news or official alerts use sensationalist, urgent, or 'clickbait' language to get attention. Do NOT flag a message as FAKE just because it sounds sensational if the core facts are verifiable and true. 
-    
-    1. Identify the core factual claims.
-    2. Use Google Search to verify these claims against multiple reputable sources.
-    3. Check for specific red flags like suspicious URLs (mismatched domains), requests for sensitive data, or financial scams.
-    4. If the claims are supported by major news outlets or official government/scientific bodies, the verdict must be GENUINE, even if the tone is urgent.
+    CONTENT: "${content}"
 
-    Message to analyze: "${text}"
-    
-    Return your analysis strictly as a JSON object matching this structure: ${ANALYSIS_SCHEMA_PROMPT}`,
+    TASK:
+    1. If URL/DOMAIN: Perform a technical reputation check. Look for WHOIS data, age of domain, and presence in blacklists or security reports.
+    2. If TEXT: Analyze for misinformation, scams, and logical fallacies.
+    3. SIMULATE MULTI-ENGINE SCAN: Provide a 'detections' array simulating how 5-10 different security/fact-check engines (e.g., Google Safe Browsing, Snopes, PolitiFact, VirusTotal reputation) would rate this.
+    4. CORE CLAIMS: Extract key assertions.
+    5. VERDICT: Decide if it is GENUINE, FAKE, or UNCERTAIN.
+    6. REPUTATION: Assign a 0-100 score (100 is perfectly safe/trusted).
+
+    CRITICAL: For URLs/Domains, explicitly look for phishing patterns (typosquatting, suspicious TLDs).
+
+    Return JSON matching: ${ANALYSIS_SCHEMA_PROMPT}`,
     config: {
-      systemInstruction: `You are an elite, neutral fact-checker and digital forensics expert. 
-      Your priority is Factual Accuracy above all else. 
-      
-      Guidelines:
-      - TRUTH OVER TONE: Legitimate breaking news often uses high-intensity language. If search confirms the event, it is GENUINE.
-      - EVIDENCE-BASED: Do not assume a message is a scam based on formatting (like all caps or emojis) if the underlying facts are corroborated by trusted sources.
-      - SCAM DETECTION: Focus on malicious intent—phishing links, fraudulent financial requests, and known viral hoaxes.
-      - CLEAR REASONING: In your explanations, clearly state why the message is considered genuine or fake, citing specific evidence or lack thereof.`,
+      systemInstruction: "You are a hybrid security engineer and expert fact-checker. Combine technical digital forensics (WHOIS, reputation, blacklists) with high-level misinformation analysis.",
       tools: [{ googleSearch: {} }],
+      responseMimeType: "application/json",
     }
   });
 
   let data: any = {};
+  // Access .text property directly (not as a method)
   const responseText = response.text || "";
   
   try {
-    // Attempt to extract JSON from markdown if necessary
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     data = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
   } catch (e) {
-    console.error("Failed to parse AI response as JSON", e);
-    throw new Error("Analysis failed. The model returned an invalid format.");
+    console.error("JSON Parse Error", e);
+    throw new Error("Detailed analysis failed.");
   }
 
-  // Extract grounding URLs from metadata for transparency
+  // Extract grounding URLs from Google Search grounding results
   const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
   const groundingUrls: {uri: string, title: string}[] = [];
   if (groundingChunks) {
     groundingChunks.forEach((chunk: any) => {
       if (chunk.web?.uri) {
-        groundingUrls.push({
-          uri: chunk.web.uri,
-          title: chunk.web.title || 'Verified Source'
-        });
+        groundingUrls.push({ uri: chunk.web.uri, title: chunk.web.title || 'Source' });
       }
     });
   }
