@@ -17,15 +17,22 @@ const App: React.FC = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAnalyze = async (type: InputType) => {
-    if (!input.trim()) return;
+  const handleAnalyze = async (type: InputType, file?: File) => {
+    // For FILE type, we check for the file object, otherwise check input text
+    if (type !== 'FILE' && !input.trim()) return;
+    if (type === 'FILE' && !file) return;
     
     setIsLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      const data = await analyzeContent(input, type);
+      // If it's a file, we pass descriptive metadata to the analysis service
+      const analysisContent = type === 'FILE' && file 
+        ? `FILENAME: ${file.name}, SIZE: ${file.size} bytes, TYPE: ${file.type}` 
+        : input;
+        
+      const data = await analyzeContent(analysisContent, type);
       setResult(data);
     } catch (err: any) {
       console.error(err);
@@ -102,12 +109,11 @@ const App: React.FC = () => {
                 <div className="relative">
                   <div className="w-24 h-24 border-4 border-indigo-100 rounded-full" />
                   <div className="w-24 h-24 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin absolute top-0" />
-                  {/* Fixed reference to ShieldCheck by adding the import above */}
                   <ShieldCheck className="w-10 h-10 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <div className="text-center space-y-2">
-                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Multi-Engine Scan in Progress</h3>
-                  <p className="text-gray-500 max-w-xs mx-auto text-sm">Aggregating data from security vendors and fact-checking sources...</p>
+                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Deep Scan in Progress</h3>
+                  <p className="text-gray-500 max-w-xs mx-auto text-sm">Checking technical metadata and global security signatures...</p>
                 </div>
               </div>
             )}

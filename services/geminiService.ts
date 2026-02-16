@@ -40,21 +40,22 @@ export async function analyzeContent(content: string, type: InputType): Promise<
     model: "gemini-3-pro-preview",
     contents: `Perform a VirusTotal-inspired deep analysis on the following ${type}:
 
-    CONTENT: "${content}"
+    CONTENT/METADATA: "${content}"
 
     TASK:
-    1. If URL/DOMAIN: Perform a technical reputation check. Look for WHOIS data, age of domain, and presence in blacklists or security reports.
-    2. If TEXT: Analyze for misinformation, scams, and logical fallacies.
-    3. SIMULATE MULTI-ENGINE SCAN: Provide a 'detections' array simulating how 5-10 different security/fact-check engines (e.g., Google Safe Browsing, Snopes, PolitiFact, VirusTotal reputation) would rate this.
-    4. CORE CLAIMS: Extract key assertions.
-    5. VERDICT: Decide if it is GENUINE, FAKE, or UNCERTAIN.
-    6. REPUTATION: Assign a 0-100 score (100 is perfectly safe/trusted).
+    1. If FILE: Analyze the metadata (filename, size, type). Look for suspicious file extensions (e.g., .exe, .scr, .zip masquerading as .pdf). Simulate a signature scan across multiple antivirus engines.
+    2. If URL/DOMAIN: Perform a technical reputation check. Look for WHOIS data, age of domain, and presence in blacklists or security reports.
+    3. If TEXT: Analyze for misinformation, scams, and logical fallacies.
+    4. SIMULATE MULTI-ENGINE SCAN: Provide a 'detections' array simulating how 5-10 different security/fact-check engines (e.g., Google Safe Browsing, Snopes, PolitiFact, VirusTotal reputation, Kaspersky, CrowdStrike) would rate this.
+    5. CORE CLAIMS: Extract key assertions.
+    6. VERDICT: Decide if it is GENUINE, FAKE, or UNCERTAIN.
+    7. REPUTATION: Assign a 0-100 score (100 is perfectly safe/trusted).
 
-    CRITICAL: For URLs/Domains, explicitly look for phishing patterns (typosquatting, suspicious TLDs).
+    CRITICAL: For files, check if the name looks like common malware lures (e.g., "Invoice_123.pdf.exe").
 
     Return JSON matching: ${ANALYSIS_SCHEMA_PROMPT}`,
     config: {
-      systemInstruction: "You are a hybrid security engineer and expert fact-checker. Combine technical digital forensics (WHOIS, reputation, blacklists) with high-level misinformation analysis.",
+      systemInstruction: "You are a hybrid security engineer and expert fact-checker. Combine technical digital forensics (File signatures, WHOIS, reputation, blacklists) with high-level misinformation analysis.",
       tools: [{ googleSearch: {} }],
       responseMimeType: "application/json",
     }
