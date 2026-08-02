@@ -1,8 +1,7 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Verdict, AnalysisResult, InputType } from "../types";
 
-// Always initialize with direct process.env.API_KEY
+// Always initialize with process.env.API_KEY (which is mapped to env.GEMINI_API_KEY in vite.config.ts)
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const ANALYSIS_SCHEMA_PROMPT = `
@@ -35,9 +34,9 @@ const ANALYSIS_SCHEMA_PROMPT = `
 `;
 
 export async function analyzeContent(content: string, type: InputType): Promise<AnalysisResult> {
-  // Use ai.models.generateContent with the appropriate model name
+  // Use ai.models.generateContent with gemini-2.5-flash
   const response = await ai.models.generateContent({
-    model: "gemini-3-pro-preview",
+    model: "gemini-2.5-flash",
     contents: `Perform a VirusTotal-inspired deep analysis on the following ${type}:
 
     CONTENT/METADATA: "${content}"
@@ -56,13 +55,11 @@ export async function analyzeContent(content: string, type: InputType): Promise<
     Return JSON matching: ${ANALYSIS_SCHEMA_PROMPT}`,
     config: {
       systemInstruction: "You are a hybrid security engineer and expert fact-checker. Combine technical digital forensics (File signatures, WHOIS, reputation, blacklists) with high-level misinformation analysis.",
-      tools: [{ googleSearch: {} }],
-      responseMimeType: "application/json",
+      tools: [{ googleSearch: {} }]
     }
   });
 
   let data: any = {};
-  // Access .text property directly (not as a method)
   const responseText = response.text || "";
   
   try {

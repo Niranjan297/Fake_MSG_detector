@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 // Initialize using named parameters and direct process.env.API_KEY
